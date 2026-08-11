@@ -620,6 +620,7 @@ footer{border-top:1px solid var(--border);padding:44px 0 60px;color:var(--muted)
     resultEl.hidden=false;
     resultEl.innerHTML=
       '<h4>✅ '+tr('Your edge is live','لبه‌ی تو آماده است')+' — '+esc(j.name)+'</h4>'+
+      (j.reused?'<p style="color:var(--muted);font-size:14px;margin:-4px 0 4px">ℹ️ '+tr('You already had an edge with this name — these are its existing links.','از قبل لبه‌ای با این نام داشتی — این‌ها لینک‌های موجود آن است.')+'</p>':'')+
       row(tr('Subscription (import this)','لینک اشتراک (این را وارد کن)'), j.sub)+
       row(tr('Import page — scannable QR','صفحه‌ی ایمپورت — QR'), j.importPage)+
       row(tr('Panel (set a password)','پنل (یک رمز بگذار)'), j.panel)+

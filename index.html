@@ -1,0 +1,515 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>ForgeEdge — your own Cloudflare Worker VPN edge</title>
+<meta name="description" content="Spin up your own Cloudflare Worker VPN edge — VLESS over the world's biggest CDN — and run the whole thing from Telegram. No server, no panel. Yours.">
+<style>
+/* ---- theme tokens: light is the bare :root; dark redefines only tokens ---- */
+:root{
+  --bg:#f5f1ea; --surface:#fffdf9; --surface-2:#ece5d8; --border:#dcd2c2;
+  --ink:#201c16; --muted:#6a6256; --faint:#8b8375;
+  --ember:#d9501b; --ember-2:#b83e0e; --amber:#a9700a;
+  --glow:rgba(217,80,27,.10); --ring:rgba(217,80,27,.35);
+  --code-bg:#f1e9dc;
+  --shadow:0 1px 2px rgba(32,28,22,.06),0 8px 30px rgba(32,28,22,.08);
+  --maxw:1080px;
+  --font-body:system-ui,-apple-system,"Segoe UI",Roboto,"Helvetica Neue",Arial,"Noto Sans",sans-serif;
+  --font-mono:ui-monospace,SFMono-Regular,"SF Mono",Menlo,Consolas,"Liberation Mono",monospace;
+}
+@media (prefers-color-scheme:dark){
+  :root:not([data-theme="light"]){
+    --bg:#131210; --surface:#1b1915; --surface-2:#23201a; --border:#322d24;
+    --ink:#f3eee4; --muted:#a59c8e; --faint:#7f7768;
+    --ember:#ff6a33; --ember-2:#ff8a4d; --amber:#ffb454;
+    --glow:rgba(255,106,51,.16); --ring:rgba(255,106,51,.45);
+    --code-bg:#211d17;
+    --shadow:0 1px 2px rgba(0,0,0,.4),0 12px 40px rgba(0,0,0,.45);
+  }
+}
+:root[data-theme="dark"]{
+  --bg:#131210; --surface:#1b1915; --surface-2:#23201a; --border:#322d24;
+  --ink:#f3eee4; --muted:#a59c8e; --faint:#7f7768;
+  --ember:#ff6a33; --ember-2:#ff8a4d; --amber:#ffb454;
+  --glow:rgba(255,106,51,.16); --ring:rgba(255,106,51,.45);
+  --code-bg:#211d17;
+  --shadow:0 1px 2px rgba(0,0,0,.4),0 12px 40px rgba(0,0,0,.45);
+}
+
+*{box-sizing:border-box}
+html{scroll-behavior:smooth}
+@media (prefers-reduced-motion:reduce){html{scroll-behavior:auto}*{animation:none!important;transition:none!important}}
+body{
+  margin:0;background:var(--bg);color:var(--ink);
+  font-family:var(--font-body);font-size:17px;line-height:1.6;
+  -webkit-font-smoothing:antialiased;text-rendering:optimizeLegibility;
+  overflow-x:hidden;
+}
+html[dir="rtl"] body{font-family:"Vazirmatn",Tahoma,var(--font-body)}
+a{color:inherit}
+.wrap{max-width:var(--maxw);margin:0 auto;padding:0 22px}
+.mono{font-family:var(--font-mono)}
+.eyebrow{font-family:var(--font-mono);font-size:12px;letter-spacing:.18em;text-transform:uppercase;color:var(--ember);font-weight:600}
+h1,h2,h3{text-wrap:balance;line-height:1.1;margin:0}
+section{padding:72px 0;border-top:1px solid var(--border)}
+.sec-head{max-width:640px;margin-bottom:38px}
+.sec-head h2{font-size:clamp(26px,4vw,38px);font-weight:800;letter-spacing:-.02em;margin:.35em 0 .3em}
+.sec-head p{color:var(--muted);margin:0;font-size:17px}
+
+/* ---- top bar ---- */
+.topbar{position:sticky;top:0;z-index:50;background:color-mix(in srgb,var(--bg) 86%,transparent);
+  backdrop-filter:saturate(1.4) blur(10px);border-bottom:1px solid var(--border)}
+.topbar .row{display:flex;align-items:center;gap:16px;height:60px}
+.brand{display:flex;align-items:center;gap:10px;font-weight:800;letter-spacing:-.01em;font-size:18px;text-decoration:none}
+.brand .spark{width:22px;height:22px;flex:none}
+.spacer{flex:1}
+.tb-btn{display:inline-flex;align-items:center;gap:7px;height:36px;padding:0 12px;border-radius:9px;border:1px solid var(--border);
+  background:var(--surface);color:var(--ink);text-decoration:none;font-size:14px;font-weight:600;cursor:pointer;font-family:inherit}
+.tb-btn:hover{border-color:var(--ring)}
+.tb-btn svg{width:16px;height:16px}
+.tb-ghost{background:transparent;border-color:transparent}
+.tb-ghost:hover{background:var(--surface-2)}
+
+/* ---- hero ---- */
+.hero{position:relative;padding:96px 0 84px;overflow:hidden;border-top:none}
+.hero::before{content:"";position:absolute;inset:-40% 0 auto 0;height:720px;pointer-events:none;
+  background:radial-gradient(60% 60% at 70% 0%,var(--glow),transparent 70%),
+             radial-gradient(40% 40% at 20% 20%,var(--glow),transparent 70%);}
+.hero .inner{position:relative;max-width:760px}
+.hero h1{font-size:clamp(48px,9vw,92px);font-weight:850;letter-spacing:-.035em;margin:.18em 0 0;
+  background:linear-gradient(180deg,var(--ink),color-mix(in srgb,var(--ink) 70%,var(--ember)));
+  -webkit-background-clip:text;background-clip:text}
+.hero .tagline{font-size:clamp(20px,3.2vw,26px);font-weight:700;color:var(--ember);margin:.25em 0 .6em;letter-spacing:-.01em}
+.hero .thesis{font-size:clamp(17px,2.3vw,20px);color:var(--muted);max-width:56ch;margin:0 0 30px}
+.cta-row{display:flex;flex-wrap:wrap;gap:12px;align-items:center}
+.btn{display:inline-flex;align-items:center;gap:9px;height:50px;padding:0 22px;border-radius:12px;font-weight:700;font-size:16px;
+  text-decoration:none;cursor:pointer;border:1px solid transparent;font-family:inherit;transition:transform .12s ease,box-shadow .12s ease,border-color .12s}
+.btn svg{width:18px;height:18px}
+.btn-primary{background:linear-gradient(180deg,var(--ember),var(--ember-2));color:#fff;box-shadow:0 6px 20px var(--glow)}
+.btn-primary:hover{transform:translateY(-1px);box-shadow:0 10px 28px var(--glow)}
+.btn-ghost{background:var(--surface);border-color:var(--border);color:var(--ink)}
+.btn-ghost:hover{border-color:var(--ring)}
+.trust{display:flex;flex-wrap:wrap;gap:8px 18px;margin-top:26px;color:var(--faint);font-size:14px;font-family:var(--font-mono)}
+.trust span{display:inline-flex;align-items:center;gap:7px}
+.trust .dot{width:6px;height:6px;border-radius:50%;background:var(--ember)}
+
+/* ---- feature cards ---- */
+.grid{display:grid;gap:18px}
+.grid-3{grid-template-columns:repeat(3,1fr)}
+.grid-2{grid-template-columns:repeat(2,1fr)}
+@media (max-width:820px){.grid-3,.grid-2{grid-template-columns:1fr}}
+.card{background:var(--surface);border:1px solid var(--border);border-radius:16px;padding:24px;box-shadow:var(--shadow)}
+.card .ic{width:38px;height:38px;border-radius:10px;display:grid;place-items:center;background:var(--surface-2);color:var(--ember);margin-bottom:14px}
+.card .ic svg{width:20px;height:20px}
+.card h3{font-size:19px;font-weight:750;margin-bottom:8px;letter-spacing:-.01em}
+.card p{margin:0;color:var(--muted);font-size:15.5px}
+
+/* ---- wizard steps ---- */
+.steps{display:flex;flex-direction:column;gap:14px;counter-reset:step}
+.step{display:grid;grid-template-columns:56px 1fr;gap:18px;align-items:start;
+  background:var(--surface);border:1px solid var(--border);border-radius:16px;padding:22px 24px;box-shadow:var(--shadow)}
+.step .num{width:44px;height:44px;border-radius:12px;display:grid;place-items:center;font-family:var(--font-mono);font-weight:700;font-size:18px;
+  color:#fff;background:linear-gradient(180deg,var(--ember),var(--ember-2));box-shadow:0 4px 14px var(--glow)}
+.step h3{font-size:20px;font-weight:750;margin-bottom:6px;letter-spacing:-.01em}
+.step p{margin:0 0 12px;color:var(--muted);font-size:15.5px}
+.step p:last-child{margin-bottom:0}
+
+/* ---- code ---- */
+.code{position:relative;background:var(--code-bg);border:1px solid var(--border);border-radius:10px;
+  font-family:var(--font-mono);font-size:14px;padding:12px 46px 12px 14px;overflow-x:auto;color:var(--ink);white-space:pre}
+.code .tok{color:var(--ember)}
+.copy{position:absolute;top:7px;inset-inline-end:7px;width:30px;height:30px;border-radius:8px;border:1px solid var(--border);
+  background:var(--surface);color:var(--muted);cursor:pointer;display:grid;place-items:center}
+.copy:hover{color:var(--ember);border-color:var(--ring)}
+.copy svg{width:15px;height:15px}
+html[dir="rtl"] .code{direction:ltr;text-align:left}
+
+/* ---- deploy paths ---- */
+.path{background:var(--surface);border:1px solid var(--border);border-radius:16px;padding:24px;box-shadow:var(--shadow);display:flex;flex-direction:column}
+.path .badge{align-self:flex-start;font-family:var(--font-mono);font-size:11px;letter-spacing:.1em;text-transform:uppercase;
+  padding:4px 9px;border-radius:999px;margin-bottom:14px;font-weight:700}
+.badge-easy{background:var(--ember);color:#fff}
+.badge-alt{background:var(--surface-2);color:var(--muted)}
+.path h3{font-size:19px;font-weight:750;margin-bottom:8px}
+.path p{color:var(--muted);font-size:15px;margin:0 0 16px;flex:1}
+
+/* ---- config reference ---- */
+.knobs{display:grid;grid-template-columns:repeat(2,1fr);gap:10px 26px}
+@media (max-width:820px){.knobs{grid-template-columns:1fr}}
+.knob{display:flex;gap:12px;align-items:baseline;padding:11px 0;border-bottom:1px solid var(--border)}
+.knob code{font-family:var(--font-mono);font-size:13.5px;color:var(--ember);background:var(--code-bg);padding:2px 7px;border-radius:6px;white-space:nowrap;flex:none}
+.knob span{color:var(--muted);font-size:14.5px}
+
+/* ---- generator ---- */
+.gen{background:var(--surface);border:1px solid var(--border);border-radius:16px;padding:26px;box-shadow:var(--shadow)}
+.gen .field{display:flex;align-items:center;gap:10px;background:var(--code-bg);border:1px solid var(--border);border-radius:10px;padding:10px 12px;margin-top:12px}
+.gen .field label{font-family:var(--font-mono);font-size:12px;color:var(--faint);text-transform:uppercase;letter-spacing:.08em;flex:none;width:110px}
+.gen .field output{font-family:var(--font-mono);font-size:14px;flex:1;overflow-x:auto;white-space:nowrap;direction:ltr;text-align:left}
+.gen .field button{flex:none}
+
+/* ---- FAQ ---- */
+.faq details{border:1px solid var(--border);border-radius:12px;background:var(--surface);margin-bottom:10px;overflow:hidden}
+.faq summary{cursor:pointer;padding:16px 20px;font-weight:650;list-style:none;display:flex;justify-content:space-between;gap:12px;align-items:center}
+.faq summary::-webkit-details-marker{display:none}
+.faq summary .chev{transition:transform .2s;color:var(--ember);flex:none}
+.faq details[open] summary .chev{transform:rotate(90deg)}
+.faq .a{padding:0 20px 18px;color:var(--muted);font-size:15.5px}
+.faq .a a{color:var(--ember);text-decoration:none;border-bottom:1px solid var(--ring)}
+
+/* ---- footer ---- */
+footer{border-top:1px solid var(--border);padding:44px 0 60px;color:var(--muted)}
+.foot{display:flex;flex-wrap:wrap;gap:18px;align-items:center;justify-content:space-between}
+.foot a{color:var(--muted);text-decoration:none;font-size:14px;display:inline-flex;gap:7px;align-items:center}
+.foot a:hover{color:var(--ember)}
+.foot .note{font-size:13px;color:var(--faint);max-width:52ch}
+:focus-visible{outline:2px solid var(--ember);outline-offset:2px;border-radius:6px}
+.reveal{opacity:0;transform:translateY(14px);animation:rise .6s ease forwards}
+@keyframes rise{to{opacity:1;transform:none}}
+</style>
+</head>
+<body>
+
+<div class="topbar">
+  <div class="wrap row">
+    <a class="brand" href="#top" aria-label="ForgeEdge home">
+      <svg class="spark" viewBox="0 0 24 24" fill="none" aria-hidden="true"><path d="M13 2 4 14h6l-1 8 9-12h-6l1-8Z" fill="var(--ember)"/></svg>
+      ForgeEdge
+    </a>
+    <div class="spacer"></div>
+    <button class="tb-btn tb-ghost" id="lang" aria-label="Switch language">فا</button>
+    <button class="tb-btn tb-ghost" id="theme" aria-label="Toggle dark mode">
+      <svg id="themeIcon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><circle cx="12" cy="12" r="4"/><path d="M12 2v2M12 20v2M4.9 4.9l1.4 1.4M17.7 17.7l1.4 1.4M2 12h2M20 12h2M4.9 19.1l1.4-1.4M17.7 6.3l1.4-1.4"/></svg>
+    </button>
+    <a class="tb-btn" href="https://t.me/Forgeedgebot" target="_blank" rel="noopener">
+      <svg viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M21.9 4.3 18.7 20c-.2 1-.9 1.3-1.8.8l-4.9-3.6-2.4 2.3c-.3.3-.5.5-1 .5l.4-5 9-8.1c.4-.3-.1-.5-.6-.2L6.7 13.9l-4.8-1.5c-1-.3-1-1 .2-1.5L20.6 3c.9-.3 1.6.2 1.3 1.3Z"/></svg>
+      <span data-i18n="tb_bot">Open bot</span>
+    </a>
+  </div>
+</div>
+
+<div id="top"></div>
+<header class="hero">
+  <div class="wrap inner reveal">
+    <span class="eyebrow" data-i18n="hero_eyebrow">Cloudflare Worker · VPN edge</span>
+    <h1>ForgeEdge</h1>
+    <div class="tagline" data-i18n="hero_tagline">Forge your own edge.</div>
+    <p class="thesis" data-i18n="hero_thesis">Spin up your own Cloudflare Worker VPN — VLESS over the world's biggest CDN — and run the whole thing from Telegram. No server. No panel to host. Yours.</p>
+    <div class="cta-row">
+      <a class="btn btn-primary" href="https://t.me/Forgeedgebot" target="_blank" rel="noopener">
+        <svg viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M21.9 4.3 18.7 20c-.2 1-.9 1.3-1.8.8l-4.9-3.6-2.4 2.3c-.3.3-.5.5-1 .5l.4-5 9-8.1c.4-.3-.1-.5-.6-.2L6.7 13.9l-4.8-1.5c-1-.3-1-1 .2-1.5L20.6 3c.9-.3 1.6.2 1.3 1.3Z"/></svg>
+        <span data-i18n="hero_cta1">Start on Telegram</span>
+      </a>
+      <a class="btn btn-ghost" href="#wizard"><span data-i18n="hero_cta2">Read the wizard</span> ↓</a>
+    </div>
+    <div class="trust">
+      <span><i class="dot"></i><span data-i18n="trust1">Free forever</span></span>
+      <span><i class="dot"></i><span data-i18n="trust2">Runs on your own Cloudflare account</span></span>
+      <span><i class="dot"></i><span data-i18n="trust3">Built to work from Iran</span></span>
+    </div>
+  </div>
+</header>
+
+<!-- WHAT IT IS -->
+<section id="what">
+  <div class="wrap">
+    <div class="sec-head">
+      <span class="eyebrow" data-i18n="what_eyebrow">What it is</span>
+      <h2 data-i18n="what_title">A VPN edge you own, not an app you rent</h2>
+      <p data-i18n="what_sub">ForgeEdge deploys a VLESS proxy to a Cloudflare Worker on your account. Your traffic rides Cloudflare's CDN, so it looks like ordinary web traffic.</p>
+    </div>
+    <div class="grid grid-3">
+      <div class="card">
+        <div class="ic"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 2 3 7v6c0 5 4 8 9 9 5-1 9-4 9-9V7l-9-5Z"/></svg></div>
+        <h3 data-i18n="c1_t">Yours, on your account</h3>
+        <p data-i18n="c1_p">The Worker lives on your Cloudflare account — not a shared server everyone else is on. You hold the keys; nobody can hand your edge to someone else.</p>
+      </div>
+      <div class="card">
+        <div class="ic"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M4 12h4l2-7 4 14 2-7h4"/></svg></div>
+        <h3 data-i18n="c2_t">Built for censorship</h3>
+        <p data-i18n="c2_p">Clean-IP fronting, SNI camouflage, TLS fragmentation, WARP and AmneziaWG — the tricks that keep working when 443 gets throttled.</p>
+      </div>
+      <div class="card">
+        <div class="ic"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 3v6M12 15v6M3 12h6M15 12h6"/><circle cx="12" cy="12" r="2.5"/></svg></div>
+        <h3 data-i18n="c3_t">Zero maintenance</h3>
+        <p data-i18n="c3_p">No VPS to rent, patch, or watch. Cloudflare runs the Worker for free on its global network. You just deploy and share the link.</p>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- WIZARD -->
+<section id="wizard">
+  <div class="wrap">
+    <div class="sec-head">
+      <span class="eyebrow" data-i18n="wiz_eyebrow">Installation wizard</span>
+      <h2 data-i18n="wiz_title">Live in four steps</h2>
+      <p data-i18n="wiz_sub">The easiest path is the Telegram bot — it does the Cloudflare work for you. Open <a href="https://t.me/Forgeedgebot" style="color:var(--ember);text-decoration:none">@Forgeedgebot</a> and follow along.</p>
+    </div>
+    <div class="steps">
+      <div class="step">
+        <div class="num">1</div>
+        <div>
+          <h3 data-i18n="s1_t">Connect your Cloudflare account</h3>
+          <p data-i18n="s1_p">Make an API token at <span class="mono">dash.cloudflare.com → My Profile → API Tokens</span> with Workers Scripts·Edit, Workers KV·Edit and Account Settings·Read. Send it to the bot — it verifies, stores it encrypted, and deletes your message.</p>
+          <div class="code"><span class="tok">/cf</span> YOUR_CLOUDFLARE_TOKEN<button class="copy" data-copy="/cf YOUR_CLOUDFLARE_TOKEN" aria-label="Copy"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="9" y="9" width="12" height="12" rx="2"/><path d="M5 15V5a2 2 0 0 1 2-2h10"/></svg></button></div>
+        </div>
+      </div>
+      <div class="step">
+        <div class="num">2</div>
+        <div>
+          <h3 data-i18n="s2_t">Deploy your edge</h3>
+          <p data-i18n="s2_p">One command. In about 30 seconds the bot creates the Worker, its storage, and a public address — then hands you the subscription link.</p>
+          <div class="code"><span class="tok">/deploy</span><button class="copy" data-copy="/deploy" aria-label="Copy"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="9" y="9" width="12" height="12" rx="2"/><path d="M5 15V5a2 2 0 0 1 2-2h10"/></svg></button></div>
+        </div>
+      </div>
+      <div class="step">
+        <div class="num">3</div>
+        <div>
+          <h3 data-i18n="s3_t">Add clean IPs for Iran</h3>
+          <p data-i18n="s3_p">Front the edge through clean Cloudflare IPs and a camouflage SNI so it stays reachable when the workers.dev name is blocked.</p>
+          <div class="code"><span class="tok">/addip</span> 188.114.96.3 188.114.97.3
+<span class="tok">/sni</span> www.speedtest.net<button class="copy" data-copy="/addip 188.114.96.3 188.114.97.3&#10;/sni www.speedtest.net" aria-label="Copy"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="9" y="9" width="12" height="12" rx="2"/><path d="M5 15V5a2 2 0 0 1 2-2h10"/></svg></button></div>
+        </div>
+      </div>
+      <div class="step">
+        <div class="num">4</div>
+        <div>
+          <h3 data-i18n="s4_t">Import to your app</h3>
+          <p data-i18n="s4_p">Send <span class="mono">/sub</span> to get your links, then paste the subscription URL into v2rayNG, Hiddify or Streisand. Configs appear — connect and you're through.</p>
+          <div class="code"><span class="tok">/sub</span><button class="copy" data-copy="/sub" aria-label="Copy"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="9" y="9" width="12" height="12" rx="2"/><path d="M5 15V5a2 2 0 0 1 2-2h10"/></svg></button></div>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- DEPLOY PATHS -->
+<section id="deploy">
+  <div class="wrap">
+    <div class="sec-head">
+      <span class="eyebrow" data-i18n="dp_eyebrow">Ways to deploy</span>
+      <h2 data-i18n="dp_title">Three ways in</h2>
+      <p data-i18n="dp_sub">Same edge underneath. Pick whichever fits you — most people just use the bot.</p>
+    </div>
+    <div class="grid grid-3">
+      <div class="path">
+        <span class="badge badge-easy" data-i18n="dp1_b">Easiest</span>
+        <h3 data-i18n="dp1_t">Telegram bot</h3>
+        <p data-i18n="dp1_p">Chat with @Forgeedgebot. It runs the Cloudflare API for you, so there's nothing to install. Deploy, add IPs, WARP, custom domains — all from your phone.</p>
+        <a class="btn btn-primary" href="https://t.me/Forgeedgebot" target="_blank" rel="noopener" style="height:44px;font-size:15px"><span data-i18n="dp1_cta">Open @Forgeedgebot</span></a>
+      </div>
+      <div class="path">
+        <span class="badge badge-alt" data-i18n="dp2_b">For power users</span>
+        <h3 data-i18n="dp2_t">forgectl CLI</h3>
+        <p data-i18n="dp2_p">Already running ForgePanel? Deploy the same edge from the command line and wire it into your subscription automatically.</p>
+        <div class="code" style="margin-top:auto"><span class="tok">forgectl</span> edge deploy<button class="copy" data-copy="forgectl edge deploy" aria-label="Copy"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="9" y="9" width="12" height="12" rx="2"/><path d="M5 15V5a2 2 0 0 1 2-2h10"/></svg></button></div>
+      </div>
+      <div class="path">
+        <span class="badge badge-alt" data-i18n="dp3_b">Manual</span>
+        <h3 data-i18n="dp3_t">Cloudflare dashboard</h3>
+        <p data-i18n="dp3_p">Prefer to do it by hand? Create a Worker in the Cloudflare dashboard, paste the ForgeEdge bundle, bind a KV namespace, and set your secret path.</p>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- CONFIG REFERENCE -->
+<section id="config">
+  <div class="wrap">
+    <div class="sec-head">
+      <span class="eyebrow" data-i18n="cfg_eyebrow">Configuration</span>
+      <h2 data-i18n="cfg_title">Every knob, one message away</h2>
+      <p data-i18n="cfg_sub">Tune the edge from chat. Each command edits the live Worker and validates before it saves.</p>
+    </div>
+    <div class="knobs">
+      <div class="knob"><code>/addip · /rmip</code><span>Add or remove clean Cloudflare IPs to front through.</span></div>
+      <div class="knob"><code>/sni · /cdnhost</code><span>Camouflage SNI and Host header for fronting.</span></div>
+      <div class="knob"><code>/refreships</code><span>Auto-mint a fresh batch of live edge IPs.</span></div>
+      <div class="knob"><code>/fragment</code><span>TLS record fragmentation to slip past DPI.</span></div>
+      <div class="knob"><code>/ports</code><span>Which Cloudflare TLS ports to advertise (443, 2053…).</span></div>
+      <div class="knob"><code>/fingerprint</code><span>uTLS fingerprint (chrome, firefox, safari…).</span></div>
+      <div class="knob"><code>/warp · /warpconf</code><span>Add WARP + AmneziaWG nodes and pull the .conf.</span></div>
+      <div class="knob"><code>/proxyip · /nat64</code><span>Reach Cloudflare-hosted destinations through the edge.</span></div>
+      <div class="knob"><code>/domain</code><span>Attach your own custom domain to the Worker.</span></div>
+      <div class="knob"><code>/chain · /backend</code><span>Chain a fixed exit or route through a backend VPS.</span></div>
+      <div class="knob"><code>/rotate</code><span>Rotate the secret path — old URLs die instantly.</span></div>
+      <div class="knob"><code>/status · /config</code><span>Live status and the full config dump.</span></div>
+    </div>
+  </div>
+</section>
+
+<!-- GENERATOR -->
+<section id="generate">
+  <div class="wrap">
+    <div class="grid grid-2" style="align-items:center;gap:40px">
+      <div class="sec-head" style="margin:0">
+        <span class="eyebrow" data-i18n="gen_eyebrow">Try it here</span>
+        <h2 data-i18n="gen_title">Generate a fresh identity</h2>
+        <p data-i18n="gen_sub">Everything below runs in your browser — nothing is sent anywhere. Handy if you deploy the Worker by hand and need a UUID and a secret path.</p>
+      </div>
+      <div class="gen">
+        <div class="field"><label>UUID</label><output id="uuid">—</output>
+          <button class="copy" data-copy-el="uuid" aria-label="Copy UUID"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="9" y="9" width="12" height="12" rx="2"/><path d="M5 15V5a2 2 0 0 1 2-2h10"/></svg></button></div>
+        <div class="field"><label data-i18n="gen_path">Secret path</label><output id="spath">—</output>
+          <button class="copy" data-copy-el="spath" aria-label="Copy secret path"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="9" y="9" width="12" height="12" rx="2"/><path d="M5 15V5a2 2 0 0 1 2-2h10"/></svg></button></div>
+        <button class="btn btn-primary" id="regen" style="margin-top:16px;width:100%;height:46px;font-size:15px"><span data-i18n="gen_btn">Generate again</span></button>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- FAQ -->
+<section id="faq">
+  <div class="wrap">
+    <div class="sec-head">
+      <span class="eyebrow">FAQ</span>
+      <h2 data-i18n="faq_title">Good questions</h2>
+    </div>
+    <div class="faq" style="max-width:780px">
+      <details open><summary><span data-i18n="q1">Is it really free?</span><svg class="chev" viewBox="0 0 24 24" width="18" fill="none" stroke="currentColor" stroke-width="2"><path d="m9 6 6 6-6 6"/></svg></summary><div class="a" data-i18n="a1">Yes. Cloudflare's free Workers plan is enough to run a personal edge, and the bot and this site cost nothing. You only ever use your own Cloudflare account.</div></details>
+      <details><summary><span data-i18n="q2">Does it work from Iran?</span><svg class="chev" viewBox="0 0 24 24" width="18" fill="none" stroke="currentColor" stroke-width="2"><path d="m9 6 6 6-6 6"/></svg></summary><div class="a" data-i18n="a2">That's what it's built for. The workers.dev name alone is often blocked, so you front the edge through clean Cloudflare IPs and a camouflage SNI (steps 3) — plus fragmentation and WARP when you need them.</div></details>
+      <details><summary><span data-i18n="q3">Is my Cloudflare token safe?</span><svg class="chev" viewBox="0 0 24 24" width="18" fill="none" stroke="currentColor" stroke-width="2"><path d="m9 6 6 6-6 6"/></svg></summary><div class="a" data-i18n="a3">The bot verifies your token, stores it encrypted, and deletes your message immediately. It's only ever used to deploy to your own account. Make a scoped token (Workers only) so it can't touch anything else.</div></details>
+      <details><summary><span data-i18n="q4">How is this different from a VPN app?</span><svg class="chev" viewBox="0 0 24 24" width="18" fill="none" stroke="currentColor" stroke-width="2"><path d="m9 6 6 6-6 6"/></svg></summary><div class="a" data-i18n="a4">A VPN app connects you to someone else's servers. ForgeEdge builds you your own edge on Cloudflare — no shared IPs to get blocked, no subscription to expire, no trust in a provider. You import the config into the same apps you already use.</div></details>
+      <details><summary><span data-i18n="q5">Why not deploy right here on this page?</span><svg class="chev" viewBox="0 0 24 24" width="18" fill="none" stroke="currentColor" stroke-width="2"><path d="m9 6 6 6-6 6"/></svg></summary><div class="a" data-i18n="a5">Cloudflare's API blocks calls from web pages (CORS), so a static site can't deploy on its own. The Telegram bot does the deploy server-side for you — which is why it's the easiest path.</div></details>
+    </div>
+  </div>
+</section>
+
+<footer>
+  <div class="wrap foot">
+    <div>
+      <a class="brand" href="#top" style="font-size:16px;margin-bottom:8px">
+        <svg class="spark" viewBox="0 0 24 24" aria-hidden="true"><path d="M13 2 4 14h6l-1 8 9-12h-6l1-8Z" fill="var(--ember)"/></svg> ForgeEdge
+      </a>
+      <p class="note" data-i18n="foot_note">Your own Cloudflare Worker VPN edge, run from Telegram. Free, open, and built for people behind heavy censorship.</p>
+    </div>
+    <div style="display:flex;gap:22px">
+      <a href="https://t.me/Forgeedgebot" target="_blank" rel="noopener">
+        <svg viewBox="0 0 24 24" width="16" fill="currentColor"><path d="M21.9 4.3 18.7 20c-.2 1-.9 1.3-1.8.8l-4.9-3.6-2.4 2.3c-.3.3-.5.5-1 .5l.4-5 9-8.1c.4-.3-.1-.5-.6-.2L6.7 13.9l-4.8-1.5c-1-.3-1-1 .2-1.5L20.6 3c.9-.3 1.6.2 1.3 1.3Z"/></svg>
+        Telegram
+      </a>
+    </div>
+  </div>
+</footer>
+
+<script>
+(function(){
+  var root=document.documentElement;
+
+  // ---- theme ----
+  try{var t=localStorage.getItem('fe-theme'); if(t) root.setAttribute('data-theme',t);}catch(e){}
+  document.getElementById('theme').addEventListener('click',function(){
+    var cur=root.getAttribute('data-theme');
+    var isDark = cur ? cur==='dark' : matchMedia('(prefers-color-scheme:dark)').matches;
+    var next=isDark?'light':'dark';
+    root.setAttribute('data-theme',next);
+    try{localStorage.setItem('fe-theme',next);}catch(e){}
+  });
+
+  // ---- i18n ----
+  var FA={
+    tb_bot:"باز کردن ربات",
+    hero_eyebrow:"Cloudflare Worker · لبه‌ی VPN",
+    hero_tagline:"لبه‌ی خودت را بساز.",
+    hero_thesis:"یک VPN روی Cloudflare Worker بساز — VLESS روی بزرگ‌ترین CDN دنیا — و همه‌چیز را از تلگرام مدیریت کن. بدون سرور، بدون پنل. مال خودت.",
+    hero_cta1:"شروع در تلگرام",
+    hero_cta2:"راهنمای نصب",
+    trust1:"همیشه رایگان",
+    trust2:"روی حساب Cloudflare خودت",
+    trust3:"ساخته‌شده برای ایران",
+    what_eyebrow:"این چیست",
+    what_title:"یک لبه‌ی VPN که مالِ خودت است، نه اپلیکیشنی که اجاره می‌کنی",
+    what_sub:"ForgeEdge یک پروکسی VLESS را روی یک Cloudflare Worker در حساب تو مستقر می‌کند. ترافیک تو از CDN کلادفلر عبور می‌کند و مثل ترافیک عادی وب دیده می‌شود.",
+    c1_t:"مالِ تو، روی حساب تو",
+    c1_p:"ورکر روی حساب Cloudflare خودت اجرا می‌شود، نه یک سرور مشترک. کلیدها دست توست؛ هیچ‌کس نمی‌تواند لبه‌ی تو را به کس دیگری بدهد.",
+    c2_t:"ساخته‌شده برای دور زدن سانسور",
+    c2_p:"آی‌پی تمیز، استتار SNI، تکه‌تکه‌کردن TLS، WARP و AmneziaWG — همان ترفندهایی که وقتی پورت ۴۴۳ کند می‌شود باز هم کار می‌کنند.",
+    c3_t:"بدون نگهداری",
+    c3_p:"نه سروری برای اجاره، نه به‌روزرسانی. کلادفلر ورکر را رایگان روی شبکه‌ی جهانی‌اش اجرا می‌کند. تو فقط مستقر می‌کنی و لینک را می‌فرستی.",
+    wiz_eyebrow:"راهنمای نصب",
+    wiz_title:"در چهار قدم آماده می‌شود",
+    wiz_sub:"ساده‌ترین راه ربات تلگرام است — کارِ کلادفلر را برایت انجام می‌دهد. @Forgeedgebot را باز کن.",
+    s1_t:"حساب کلادفلر را وصل کن",
+    s1_p:"یک توکن API در dash.cloudflare.com با دسترسی‌های Workers Scripts·Edit و Workers KV·Edit و Account Settings·Read بساز و برای ربات بفرست؛ آن را تأیید و رمزنگاری‌شده ذخیره می‌کند و پیامت را پاک می‌کند.",
+    s2_t:"لبه‌ات را مستقر کن",
+    s2_p:"فقط یک دستور. حدود ۳۰ ثانیه بعد، ربات ورکر، فضای ذخیره‌سازی و یک آدرس عمومی می‌سازد و لینک اشتراک را می‌دهد.",
+    s3_t:"برای ایران آی‌پی تمیز اضافه کن",
+    s3_p:"لبه را از آی‌پی‌های تمیز کلادفلر و یک SNI استتاری عبور بده تا وقتی نام workers.dev بسته است هم در دسترس بماند.",
+    s4_t:"به اپلیکیشنت اضافه کن",
+    s4_p:"با /sub لینک‌ها را بگیر و آدرس اشتراک را در v2rayNG، Hiddify یا Streisand بچسبان. کانفیگ‌ها ظاهر می‌شوند — وصل شو.",
+    dp_eyebrow:"روش‌های نصب",
+    dp_title:"سه راه ورود",
+    dp_sub:"لبه‌ی یکسان زیر همه. هر کدام که برایت راحت‌تر است — بیشتر مردم فقط از ربات استفاده می‌کنند.",
+    dp1_b:"ساده‌ترین",
+    dp1_t:"ربات تلگرام",
+    dp1_p:"با @Forgeedgebot گفت‌وگو کن. API کلادفلر را برایت اجرا می‌کند، پس چیزی برای نصب نیست. مستقرسازی، آی‌پی، WARP و دامنه — همه از گوشی.",
+    dp1_cta:"باز کردن @Forgeedgebot",
+    dp2_b:"برای حرفه‌ای‌ها",
+    dp2_t:"خط فرمان forgectl",
+    dp2_p:"ForgePanel داری؟ همین لبه را از خط فرمان مستقر کن و خودکار به اشتراکت وصل شود.",
+    dp3_b:"دستی",
+    dp3_t:"داشبورد کلادفلر",
+    dp3_p:"ترجیح می‌دهی دستی باشد؟ در داشبورد کلادفلر یک ورکر بساز، باندل ForgeEdge را بچسبان، یک KV وصل کن و مسیر مخفی را تنظیم کن.",
+    cfg_eyebrow:"پیکربندی",
+    cfg_title:"هر تنظیم، فقط یک پیام",
+    cfg_sub:"لبه را از چت تنظیم کن. هر دستور ورکر زنده را ویرایش و پیش از ذخیره اعتبارسنجی می‌کند.",
+    gen_eyebrow:"همین‌جا امتحان کن",
+    gen_title:"یک شناسه‌ی تازه بساز",
+    gen_sub:"همه‌چیز زیر در مرورگر تو اجرا می‌شود — چیزی جایی فرستاده نمی‌شود. برای وقتی که ورکر را دستی مستقر می‌کنی و به UUID و مسیر مخفی نیاز داری.",
+    gen_path:"مسیر مخفی",
+    gen_btn:"دوباره بساز",
+    faq_title:"سؤال‌های خوب",
+    q1:"واقعاً رایگان است؟",
+    a1:"بله. پلن رایگان Workers کلادفلر برای یک لبه‌ی شخصی کافی است و ربات و این سایت هیچ هزینه‌ای ندارند. همیشه فقط از حساب کلادفلر خودت استفاده می‌شود.",
+    q2:"از ایران کار می‌کند؟",
+    a2:"دقیقاً برای همین ساخته شده. نام workers.dev اغلب بسته است، پس لبه را از آی‌پی‌های تمیز کلادفلر و یک SNI استتاری عبور می‌دهی — به‌علاوه‌ی فرگمنت و WARP هر وقت لازم شد.",
+    q3:"توکن کلادفلرم امن است؟",
+    a3:"ربات توکن را تأیید، رمزنگاری‌شده ذخیره و پیامت را فوراً پاک می‌کند. فقط برای مستقرسازی روی حساب خودت استفاده می‌شود. یک توکن محدود (فقط Workers) بساز تا به چیز دیگری دسترسی نداشته باشد.",
+    q4:"فرقش با یک اپ VPN چیست؟",
+    a4:"یک اپ VPN تو را به سرورهای کسِ دیگر وصل می‌کند. ForgeEdge برایت یک لبه‌ی خودت روی کلادفلر می‌سازد — بدون آی‌پی مشترکی که بسته شود، بدون اشتراکی که منقضی شود. کانفیگ را در همان اپ‌های همیشگی وارد می‌کنی.",
+    q5:"چرا همین‌جا در این صفحه مستقر نمی‌شود؟",
+    a5:"API کلادفلر تماس از صفحات وب را می‌بندد (CORS)، پس یک سایت ایستا نمی‌تواند خودش مستقر کند. ربات تلگرام مستقرسازی را سمت سرور برایت انجام می‌دهد — برای همین ساده‌ترین راه است.",
+    foot_note:"لبه‌ی VPN خودت روی Cloudflare Worker، از تلگرام. رایگان، باز و ساخته‌شده برای کسانی که پشت سانسور سنگین‌اند."
+  };
+  var EN={}; document.querySelectorAll('[data-i18n]').forEach(function(el){EN[el.getAttribute('data-i18n')]=el.innerHTML;});
+  function setLang(l){
+    var map = l==='fa'?FA:EN;
+    document.querySelectorAll('[data-i18n]').forEach(function(el){
+      var k=el.getAttribute('data-i18n'); if(map[k]!=null) el.innerHTML=map[k];
+    });
+    root.setAttribute('lang',l); root.setAttribute('dir', l==='fa'?'rtl':'ltr');
+    document.getElementById('lang').textContent = l==='fa'?'EN':'فا';
+    try{localStorage.setItem('fe-lang',l);}catch(e){}
+  }
+  var savedLang; try{savedLang=localStorage.getItem('fe-lang');}catch(e){}
+  if(savedLang==='fa') setLang('fa');
+  document.getElementById('lang').addEventListener('click',function(){
+    setLang(root.getAttribute('dir')==='rtl'?'en':'fa');
+  });
+
+  // ---- copy buttons ----
+  document.addEventListener('click',function(e){
+    var b=e.target.closest('[data-copy],[data-copy-el]'); if(!b) return;
+    var txt=b.hasAttribute('data-copy')?b.getAttribute('data-copy'):(document.getElementById(b.getAttribute('data-copy-el')).textContent||'');
+    navigator.clipboard&&navigator.clipboard.writeText(txt);
+    var svg=b.querySelector('svg'); if(svg){var o=svg.style.opacity;svg.style.opacity=.35;setTimeout(function(){svg.style.opacity=o;},400);}
+  });
+
+  // ---- identity generator ----
+  function uuid(){
+    if(crypto.randomUUID) return crypto.randomUUID();
+    var b=crypto.getRandomValues(new Uint8Array(16));b[6]=(b[6]&15)|64;b[8]=(b[8]&63)|128;
+    var h=[].map.call(b,function(x){return(x+256).toString(16).slice(1);});
+    return h.slice(0,4).join('')+'-'+h.slice(4,6).join('')+'-'+h.slice(6,8).join('')+'-'+h.slice(8,10).join('')+'-'+h.slice(10,16).join('');
+  }
+  function spath(){
+    var a='abcdefghijkmnpqrstuvwxyz23456789',s='',r=crypto.getRandomValues(new Uint8Array(24));
+    for(var i=0;i<24;i++)s+=a[r[i]%a.length];return s;
+  }
+  function regen(){document.getElementById('uuid').textContent=uuid();document.getElementById('spath').textContent=spath();}
+  document.getElementById('regen').addEventListener('click',regen); regen();
+})();
+</script>
+</body>
+</html>

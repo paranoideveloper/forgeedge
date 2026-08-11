@@ -166,6 +166,39 @@ footer{border-top:1px solid var(--border);padding:44px 0 60px;color:var(--muted)
 :focus-visible{outline:2px solid var(--ember);outline-offset:2px;border-radius:6px}
 .reveal{opacity:0;transform:translateY(14px);animation:rise .6s ease forwards}
 @keyframes rise{to{opacity:1;transform:none}}
+
+/* ---- install / deploy panel ---- */
+.installcard{background:var(--surface);border:1px solid var(--border);border-radius:20px;padding:32px;max-width:720px;margin:0 auto;box-shadow:var(--shadow);position:relative;overflow:hidden}
+.installcard::before{content:"";position:absolute;inset:0 0 auto 0;height:3px;background:linear-gradient(90deg,var(--ember),var(--amber),var(--ember))}
+.ins-steps{margin:0 0 22px;padding-inline-start:22px;color:var(--muted);font-size:15px;display:flex;flex-direction:column;gap:7px}
+.ins-steps li{padding-inline-start:4px}
+.ins-steps a{color:var(--ember);text-decoration:none;font-weight:650;border-bottom:1px solid var(--ring)}
+.tokrow{display:flex;align-items:center;gap:10px;background:var(--code-bg);border:1px solid var(--border);border-radius:12px;padding:0 12px;margin-bottom:12px;transition:border-color .15s}
+.tokrow:focus-within{border-color:var(--ember)}
+.tokrow .tk{width:18px;height:18px;color:var(--faint);flex:none}
+.tokrow input{flex:1;background:transparent;border:none;outline:none;color:var(--ink);font-family:var(--font-mono);font-size:14.5px;height:50px;min-width:0}
+.tokrow input::placeholder{color:var(--faint);font-family:var(--font-body)}
+.eye{flex:none;background:transparent;border:none;color:var(--faint);cursor:pointer;width:34px;height:34px;display:grid;place-items:center;border-radius:8px}
+.eye:hover{color:var(--ember)}
+.eye svg{width:18px;height:18px}
+.acctsel{width:100%;height:48px;border-radius:12px;border:1px solid var(--border);background:var(--code-bg);color:var(--ink);font-family:inherit;font-size:15px;padding:0 12px;margin-bottom:12px}
+.install-btn{width:100%;height:54px;font-size:16px;justify-content:center;margin-top:6px}
+.install-btn[disabled]{opacity:.6;cursor:progress;transform:none}
+.status{margin-top:16px;font-family:var(--font-mono);font-size:13.5px;color:var(--faint);display:flex;align-items:center;gap:9px;min-height:20px}
+.status::before{content:"";width:8px;height:8px;border-radius:50%;background:var(--faint);flex:none}
+.status.busy::before{background:var(--amber);animation:pulse 1s ease-in-out infinite}
+.status.ok::before{background:#2ea043}
+.status.err::before{background:#e5484d}
+.status.warn::before{background:var(--amber)}
+@keyframes pulse{50%{opacity:.35}}
+.result{margin-top:18px;border-top:1px solid var(--border);padding-top:18px;display:flex;flex-direction:column;gap:12px}
+.result h4{margin:0;font-size:17px;font-weight:750}
+.res-row{display:flex;flex-direction:column;gap:5px}
+.res-row .lbl{font-family:var(--font-mono);font-size:11px;letter-spacing:.08em;text-transform:uppercase;color:var(--faint)}
+.res-field{display:flex;align-items:center;gap:8px;background:var(--code-bg);border:1px solid var(--border);border-radius:10px;padding:9px 12px}
+.res-field .val{flex:1;font-family:var(--font-mono);font-size:13px;overflow-x:auto;white-space:nowrap;direction:ltr;text-align:left;color:var(--ink)}
+.res-actions{display:flex;flex-wrap:wrap;gap:10px;margin-top:4px}
+.res-actions .btn{height:42px;font-size:14px}
 </style>
 </head>
 <body>
@@ -196,11 +229,14 @@ footer{border-top:1px solid var(--border);padding:44px 0 60px;color:var(--muted)
     <div class="tagline" data-i18n="hero_tagline">Forge your own edge.</div>
     <p class="thesis" data-i18n="hero_thesis">Spin up your own Cloudflare Worker VPN — VLESS over the world's biggest CDN — and run the whole thing from Telegram. No server. No panel to host. Yours.</p>
     <div class="cta-row">
-      <a class="btn btn-primary" href="https://t.me/Forgeedgebot" target="_blank" rel="noopener">
-        <svg viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M21.9 4.3 18.7 20c-.2 1-.9 1.3-1.8.8l-4.9-3.6-2.4 2.3c-.3.3-.5.5-1 .5l.4-5 9-8.1c.4-.3-.1-.5-.6-.2L6.7 13.9l-4.8-1.5c-1-.3-1-1 .2-1.5L20.6 3c.9-.3 1.6.2 1.3 1.3Z"/></svg>
-        <span data-i18n="hero_cta1">Start on Telegram</span>
+      <a class="btn btn-primary" href="#install">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M4 14a8 8 0 0 1 8-8c4 0 6 3 6 3M20 10a8 8 0 0 1-8 8c-4 0-6-3-6-3"/><path d="M12 3 9 6l3 3M12 21l3-3-3-3" fill="currentColor" stroke="none"/></svg>
+        <span data-i18n="hero_cta1">Deploy now</span>
       </a>
-      <a class="btn btn-ghost" href="#wizard"><span data-i18n="hero_cta2">Read the wizard</span> ↓</a>
+      <a class="btn btn-ghost" href="https://t.me/Forgeedgebot" target="_blank" rel="noopener">
+        <svg viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M21.9 4.3 18.7 20c-.2 1-.9 1.3-1.8.8l-4.9-3.6-2.4 2.3c-.3.3-.5.5-1 .5l.4-5 9-8.1c.4-.3-.1-.5-.6-.2L6.7 13.9l-4.8-1.5c-1-.3-1-1 .2-1.5L20.6 3c.9-.3 1.6.2 1.3 1.3Z"/></svg>
+        <span data-i18n="hero_cta2">Use the Telegram bot</span>
+      </a>
     </div>
     <div class="trust">
       <span><i class="dot"></i><span data-i18n="trust1">Free forever</span></span>
@@ -209,6 +245,48 @@ footer{border-top:1px solid var(--border);padding:44px 0 60px;color:var(--muted)
     </div>
   </div>
 </header>
+
+<!-- INSTALL / DEPLOY -->
+<section id="install" style="padding-top:56px">
+  <div class="wrap">
+    <div class="installcard">
+      <div class="sec-head" style="margin-bottom:22px">
+        <span class="eyebrow" data-i18n="ins_eyebrow">Deploy in your browser</span>
+        <h2 data-i18n="ins_title">Paste your token, get your edge</h2>
+        <p data-i18n="ins_sub">No bot, no install. Enter a Cloudflare API token and ForgeEdge deploys to your own account in about 20 seconds — clean IPs and fragmentation already switched on.</p>
+      </div>
+      <ol class="ins-steps">
+        <li><a href="https://dash.cloudflare.com/sign-up" target="_blank" rel="noopener" data-i18n="ins_l1">Sign up</a> <span data-i18n="ins_l1b">for a free Cloudflare account.</span></li>
+        <li><a href="https://dash.cloudflare.com/profile/api-tokens" target="_blank" rel="noopener" data-i18n="ins_l2">Create a token</a> <span data-i18n="ins_l2b">with Workers Scripts·Edit, Workers KV·Edit and Account Settings·Read, then copy it.</span></li>
+        <li data-i18n="ins_l3">Paste it below and hit Deploy.</li>
+        <li data-i18n="ins_l4">Import the subscription link into v2rayNG, Hiddify or Streisand.</li>
+      </ol>
+
+      <div class="tokrow">
+        <svg class="tk" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M7 14a4 4 0 1 0 0-8 4 4 0 0 0 0 8ZM11 10h10M17 10v4M21 10v3"/></svg>
+        <input id="tok" type="password" placeholder="Cloudflare API Token" autocomplete="off" autocapitalize="off" spellcheck="false">
+        <button id="eye" class="eye" type="button" aria-label="Show token">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M2 12s3.5-7 10-7 10 7 10 7-3.5 7-10 7-10-7-10-7Z"/><circle cx="12" cy="12" r="3"/></svg>
+        </button>
+      </div>
+      <div class="tokrow">
+        <svg class="tk" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M4 7h16M4 12h16M4 17h10"/></svg>
+        <input id="wname" type="text" placeholder="Edge name (optional)" autocomplete="off" autocapitalize="off" spellcheck="false">
+      </div>
+      <select id="acct" class="acctsel" hidden aria-label="Cloudflare account"></select>
+
+      <button id="install" class="btn btn-primary install-btn" type="button">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M12 3v12M7 10l5 5 5-5M5 21h14"/></svg>
+        <span data-i18n="ins_btn">Deploy my edge</span>
+      </button>
+
+      <div id="status" class="status" data-i18n="ins_standby">Standby — paste a token to begin.</div>
+      <div id="result" class="result" hidden></div>
+
+      <p class="ins-safe" data-i18n="ins_safe">🔒 Your token is sent straight to the deploy service, used once, and never stored. Deploys to your account only.</p>
+    </div>
+  </div>
+</section>
 
 <!-- WHAT IT IS -->
 <section id="what">
@@ -244,7 +322,7 @@ footer{border-top:1px solid var(--border);padding:44px 0 60px;color:var(--muted)
     <div class="sec-head">
       <span class="eyebrow" data-i18n="wiz_eyebrow">Installation wizard</span>
       <h2 data-i18n="wiz_title">Live in four steps</h2>
-      <p data-i18n="wiz_sub">The easiest path is the Telegram bot — it does the Cloudflare work for you. Open <a href="https://t.me/Forgeedgebot" style="color:var(--ember);text-decoration:none">@Forgeedgebot</a> and follow along.</p>
+      <p data-i18n="wiz_sub">The <strong>Deploy</strong> panel above already does steps 1–2 for you. Prefer chat? The very same flow runs in <a href="https://t.me/Forgeedgebot" style="color:var(--ember);text-decoration:none">@Forgeedgebot</a> with these commands.</p>
     </div>
     <div class="steps">
       <div class="step">
@@ -413,8 +491,20 @@ footer{border-top:1px solid var(--border);padding:44px 0 60px;color:var(--muted)
     hero_eyebrow:"Cloudflare Worker · لبه‌ی VPN",
     hero_tagline:"لبه‌ی خودت را بساز.",
     hero_thesis:"یک VPN روی Cloudflare Worker بساز — VLESS روی بزرگ‌ترین CDN دنیا — و همه‌چیز را از تلگرام مدیریت کن. بدون سرور، بدون پنل. مال خودت.",
-    hero_cta1:"شروع در تلگرام",
-    hero_cta2:"راهنمای نصب",
+    hero_cta1:"استقرار همین حالا",
+    hero_cta2:"استفاده از ربات تلگرام",
+    ins_eyebrow:"استقرار در مرورگر",
+    ins_title:"توکنت را بچسبان، لبه‌ات را بگیر",
+    ins_sub:"بدون ربات، بدون نصب. یک توکن API کلادفلر بده تا ForgeEdge در حدود ۲۰ ثانیه روی حساب خودت مستقر شود — آی‌پی تمیز و فرگمنت از قبل روشن.",
+    ins_l1:"ثبت‌نام کن",
+    ins_l1b:"برای یک حساب رایگان کلادفلر.",
+    ins_l2:"یک توکن بساز",
+    ins_l2b:"با دسترسی‌های Workers Scripts·Edit و Workers KV·Edit و Account Settings·Read، بعد کپی‌اش کن.",
+    ins_l3:"پایین بچسبان و Deploy را بزن.",
+    ins_l4:"لینک اشتراک را در v2rayNG، Hiddify یا Streisand وارد کن.",
+    ins_btn:"لبه‌ام را مستقر کن",
+    ins_standby:"آماده — یک توکن بچسبان تا شروع شود.",
+    ins_safe:"🔒 توکنت مستقیم به سرویس استقرار می‌رود، یک‌بار استفاده می‌شود و ذخیره نمی‌شود. فقط روی حساب خودت مستقر می‌کند.",
     trust1:"همیشه رایگان",
     trust2:"روی حساب Cloudflare خودت",
     trust3:"ساخته‌شده برای ایران",
@@ -429,7 +519,7 @@ footer{border-top:1px solid var(--border);padding:44px 0 60px;color:var(--muted)
     c3_p:"نه سروری برای اجاره، نه به‌روزرسانی. کلادفلر ورکر را رایگان روی شبکه‌ی جهانی‌اش اجرا می‌کند. تو فقط مستقر می‌کنی و لینک را می‌فرستی.",
     wiz_eyebrow:"راهنمای نصب",
     wiz_title:"در چهار قدم آماده می‌شود",
-    wiz_sub:"ساده‌ترین راه ربات تلگرام است — کارِ کلادفلر را برایت انجام می‌دهد. @Forgeedgebot را باز کن.",
+    wiz_sub:"پنل <strong>Deploy</strong> بالا قدم‌های ۱ و ۲ را برایت انجام می‌دهد. چت را ترجیح می‌دهی؟ همین روند در @Forgeedgebot با این دستورها اجرا می‌شود.",
     s1_t:"حساب کلادفلر را وصل کن",
     s1_p:"یک توکن API در dash.cloudflare.com با دسترسی‌های Workers Scripts·Edit و Workers KV·Edit و Account Settings·Read بساز و برای ربات بفرست؛ آن را تأیید و رمزنگاری‌شده ذخیره می‌کند و پیامت را پاک می‌کند.",
     s2_t:"لبه‌ات را مستقر کن",
@@ -509,6 +599,67 @@ footer{border-top:1px solid var(--border);padding:44px 0 60px;color:var(--muted)
   }
   function regen(){document.getElementById('uuid').textContent=uuid();document.getElementById('spath').textContent=spath();}
   document.getElementById('regen').addEventListener('click',regen); regen();
+
+  // ---- deploy panel ----
+  var WIZARD="https://forgeedge-wizard.forgeedge-hub.workers.dev";
+  var tok=document.getElementById('tok'), eye=document.getElementById('eye'),
+      wname=document.getElementById('wname'), acct=document.getElementById('acct'),
+      installBtn=document.getElementById('install'), statusEl=document.getElementById('status'),
+      resultEl=document.getElementById('result');
+  function isFa(){return root.getAttribute('dir')==='rtl';}
+  function tr(en,fa){return isFa()?fa:en;}
+
+  eye.addEventListener('click',function(){
+    var show=tok.type==='password'; tok.type=show?'text':'password';
+    eye.style.color=show?'var(--ember)':'';
+  });
+  function setStatus(txt,kind){statusEl.textContent=txt;statusEl.className='status'+(kind?' '+kind:'');}
+
+  function esc(s){return String(s).replace(/[&<>"]/g,function(c){return{'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c];});}
+  function renderResult(j){
+    resultEl.hidden=false;
+    resultEl.innerHTML=
+      '<h4>✅ '+tr('Your edge is live','لبه‌ی تو آماده است')+' — '+esc(j.name)+'</h4>'+
+      row(tr('Subscription (import this)','لینک اشتراک (این را وارد کن)'), j.sub)+
+      row(tr('Import page — scannable QR','صفحه‌ی ایمپورت — QR'), j.importPage)+
+      row(tr('Panel (set a password)','پنل (یک رمز بگذار)'), j.panel)+
+      '<div class="res-actions">'+
+        '<button class="btn btn-primary" data-copy="'+esc(j.sub)+'">'+tr('Copy subscription','کپی اشتراک')+'</button>'+
+        '<a class="btn btn-ghost" href="'+esc(j.importPage)+'" target="_blank" rel="noopener">'+tr('Open QR page','باز کردن QR')+'</a>'+
+      '</div>'+
+      '<p style="color:var(--muted);font-size:14px;margin:6px 0 0">'+tr(
+        'Paste the subscription link into v2rayNG, Hiddify or Streisand. Clean IPs and fragmentation are already on.',
+        'لینک اشتراک را در v2rayNG، Hiddify یا Streisand بچسبان. آی‌پی تمیز و فرگمنت از قبل روشن‌اند.')+'</p>';
+  }
+  function row(label,val){
+    return '<div class="res-row"><span class="lbl">'+esc(label)+'</span>'+
+      '<div class="res-field"><span class="val">'+esc(val)+'</span>'+
+      '<button class="copy" data-copy="'+esc(val)+'" aria-label="Copy"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="9" y="9" width="12" height="12" rx="2"/><path d="M5 15V5a2 2 0 0 1 2-2h10"/></svg></button></div></div>';
+  }
+
+  async function deploy(){
+    var token=(tok.value||'').trim();
+    if(!token){setStatus(tr('Paste your Cloudflare token first.','اول توکن کلادفلر را بچسبان.'),'warn');tok.focus();return;}
+    installBtn.disabled=true; resultEl.hidden=true;
+    setStatus(tr('Deploying to your account… (~20s)','در حال استقرار روی حساب تو… (~۲۰ ثانیه)'),'busy');
+    try{
+      var payload={token:token, name:(wname.value||'').trim()};
+      if(acct.value && !acct.hidden) payload.account=acct.value;
+      var r=await fetch(WIZARD+'/api/deploy',{method:'POST',headers:{'content-type':'application/json'},body:JSON.stringify(payload)});
+      var j=await r.json();
+      if(j.needAccount){
+        acct.hidden=false; acct.innerHTML='<option value="" disabled selected>'+tr('Choose an account','یک حساب انتخاب کن')+'</option>'+
+          j.accounts.map(function(a){return '<option value="'+esc(a.id)+'">'+esc(a.name)+'</option>';}).join('');
+        setStatus(tr('You have several accounts — pick one, then Deploy again.','چند حساب داری — یکی را انتخاب و دوباره Deploy کن.'),'warn');
+        installBtn.disabled=false; return;
+      }
+      if(!j.ok){ setStatus('❌ '+(j.error||tr('Deploy failed.','استقرار ناموفق بود.')),'err'); installBtn.disabled=false; return; }
+      renderResult(j); setStatus(tr('Done. Your edge is live.','تمام شد. لبه‌ات آماده است.'),'ok');
+    }catch(e){ setStatus('❌ '+tr('Could not reach the deploy service. Try again.','به سرویس استقرار نرسیدیم. دوباره امتحان کن.'),'err'); }
+    installBtn.disabled=false;
+  }
+  installBtn.addEventListener('click',deploy);
+  tok.addEventListener('keydown',function(e){if(e.key==='Enter')deploy();});
 })();
 </script>
 </body>
